@@ -1,16 +1,16 @@
 ## Utilization and release of fossil carbon from eroding permafrost coastlines
 
-Bioinformaice code for bacterial community analyses in "Utilization and release of fossil carbon from eroding permafrost coastlines" by Manuel Ruben et al. (doi: XXX). Metabarcoding reads were obtained using 16S rRNA primers, followed by Illumina MiSeq sequencing and generation of amplicon sequence variants (ASVs) using DADA2 following the developer's guidelines (https://benjjneb.github.io/dada2/tutorial_1_8.html). The repo includes the full pipleline (raw fastq reads to ASV taxonomy) and all subsequent steps that result in the paper.
+Bioinformatic code for bacterial community analyses in "Utilization and release of fossil carbon from eroding permafrost coastlines" by Manuel Ruben et al. (doi: XXX). Metabarcoding reads were obtained using 16S rRNA primers, followed by Illumina MiSeq sequencing and generation of amplicon sequence variants (ASVs) using DADA2 following https://benjjneb.github.io/dada2/tutorial_1_8.html. The repo includes the full pipeline (raw fastq reads to ASV taxonomy) and all subsequent analyses.
 
 ### Organization of directories and files
 
-yedomaBacteria.Rmd: Rmarkdown describing primer clipping and DADA2 pipeline 
+[Rmarkdown](yedomaBacteria.Rmd) describing primer clipping and DADA2 pipeline 
 
-Resulting (ASV table), taxonony table, and ASV sequences
+Resulting [ASV table](seqtab.txt), [taxonomy table](tax.txt), and [ASV sequences](ASV.fasta)
 
-ENA accession numbers of all raw fastq files
+[ENA accession numbers](ENA_accessions.txt) of all raw fastq files
 
-metadata: physicochemical measurements and general sample information, needed for community analyses
+[Physicochemical data and sample info](metadata.txt), needed for community analyses
 
-Scripts for analyses/figures in the paper: loading/formatting data, rarefaction, community, and correlations
+Scripts for analyses/figures, to be run in this order: [load/format data](DataLoad.R), [calculate alpha-diversity](RarefacDiversity.R), [community analyses](Res_Communities.R), [environmental correlations](Res_Correlations.R)
 

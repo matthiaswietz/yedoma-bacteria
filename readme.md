@@ -2,7 +2,7 @@
 
 Bioinformatic code for bacterial community analyses in "Utilization and release of fossil carbon from eroding permafrost coastlines" by Manuel Ruben et al. (doi: XXX). Metabarcoding reads were obtained using 16S rRNA primers, followed by Illumina MiSeq sequencing and generation of amplicon sequence variants (ASVs) using DADA2 following https://benjjneb.github.io/dada2/tutorial_1_8.html. The repo includes the full pipeline (raw fastq reads to ASV taxonomy) and all subsequent analyses.
 
-### Organization of directories and files
+### Overview of content
 
 [Rmarkdown](yedomaBacteria.Rmd) describing primer clipping and DADA2 pipeline 
 

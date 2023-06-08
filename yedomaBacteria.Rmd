@@ -285,7 +285,7 @@ write.table(
   sep="\t", quote=F)
 uniquesToFasta(
   seqtab.nochim2.good,
-  "uniques.fasta")
+  "ASV.fasta")
 
 # summary stats
 getN <- function(x) sum(getUniques(x))

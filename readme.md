@@ -1,6 +1,6 @@
-## Utilization and release of fossil carbon from eroding permafrost coastlines
+## Release and microbial utilization of fossil carbon from eroding permafrost coastlines
 
-Bioinformatic code for bacterial community analyses in "Utilization and release of fossil carbon from eroding permafrost coastlines" by Ruben and colleagues (doi: XXX). Metabarcoding reads were obtained using 16S rRNA primers, followed by Illumina MiSeq sequencing and generation of amplicon sequence variants (ASVs) using DADA2 following https://benjjneb.github.io/dada2/tutorial_1_8.html. The repo includes the full pipeline (raw fastq reads to ASV taxonomy) and all subsequent analyses.
+Bioinformatic code for bacterial community analyses in "Release and microbial utilization of fossil carbon from eroding permafrost coastlines" by Ruben and colleagues (doi: XXX). Metabarcoding reads were obtained using 16S rRNA primers, followed by Illumina MiSeq sequencing and generation of amplicon sequence variants (ASVs) using [DADA2](https://benjjneb.github.io/dada2/tutorial_1_8.html). The repo includes the full pipeline (raw fastq reads to ASV taxonomy) and all subsequent analyses.
 
 ### Overview of content
 

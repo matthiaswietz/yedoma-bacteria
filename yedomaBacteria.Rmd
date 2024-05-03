@@ -1,0 +1,310 @@
+---
+title: "Microbial communities degrade ancient permafrost-derived organic matter in Arctic seawater"  
+---
+
+This markdown describes the processing of 16S rRNA amplicon sequences from a permafrost-thaw remineralization experiment, described in the paper "Microbial communities degrade ancient permafrost-derived organic matter in Arctic seawater (Ruben et al.). The corresponding raw fastq files are available under ENA accession PRJEB59831. 
+
+First we remove primers using *Cutadapt*  
+
+```{console}
+
+######################################
+## FILE PREPARATION ##
+######################################
+
+# Fastq files listed in "files2cp.txt" are copied from AWI tape archive using in-house script  
+# Adjust for your own system accordingly
+
+cd /isibhv/projects/FRAMdata/MolObs/otherProjects/Permafrost/
+
+/isibhv/projects/p_bioinf2/miseq/copy-files-from-tape.sh files2cp.txt
+
+# rename 
+mv M03457_0094_000000000-JV762 Original
+
+# combine all samples in single directory
+mv ./M03457_0109_000000000-KGG6V/* ./Original
+
+# remove empty folder
+rm -rf M03457_0109_000000000-KGG6V
+
+######################################
+## PRIMER CLIPPING ##
+######################################
+
+module load bio/cutadapt/3.2
+bash ./../../software/cutadapt.sh ./Original GTGYCAGCMGCCGCGGTAA CCGYCAATTYMTTTRAGTTT
+
+# test rename
+cd Clipped
+for i in *fastq.gz; do nname=`echo $i | awk '{gsub(/_S[0-9]{1,2}_L001/,"_clip");print}'`; echo -e $i $nname; done 
+for i in *fastq.gz; do nname=`echo $i | awk '{gsub(/^[0-9]{1,8}-/,"");print}'`; echo -e $i $nname; done 
+
+# if looking OK - execute:  
+for i in *fastq.gz; do nname=`echo $i | awk '{gsub(/_S[0-9]{1,2}_L001/,"_clip");print}'`; mv $i $nname; done
+for i in *fastq.gz; do nname=`echo $i | awk '{gsub(/^[0-9]{1,8}-/,"");print}'`; mv $i $nname; done
+
+# write sampleNames for dada
+ls -1 *R1_001.fastq.gz | sed 's/_R1_001\.fastq.gz//' > ../sampleNames.txt
+
+```
+
+*Now to DADA!*
+
+# done in RStudio within AWI-VM
+# provided IP address opened in browser
+# adjust for your own system 
+
+```{r, eval=F}
+
+require(dada2)
+require(ShortRead)
+require(ggplot2)
+require(gridExtra)
+
+##########################################
+
+# setwd 
+setwd("/isibhv/projects/FRAMdata/MolObs/otherProjects/Permafrost/")
+
+# list files
+path <- "/isibhv/projects/FRAMdata/MolObs/otherProjects/Permafrost/Clipped"
+fns <- list.files(path)
+fns
+
+# ensure fwd/rev reads  in same order
+fnFs <- sort(list.files(path, pattern="_R1_001.fastq.gz"))
+fnRs <- sort(list.files(path, pattern="_R2_001.fastq.gz"))
+
+# Define sample names
+sampleNames <- sort(read.table(
+  "sampleNames.txt", 
+  h=F, stringsAsFactors=F)$V1)
+
+# Specify the full path to the fnFs and fnRs
+fnFs <- file.path(path, fnFs)
+fnRs <- file.path(path, fnRs)
+
+#################################
+
+# Quality check
+QualityProfileFs <- list()
+for(i in 1:length(fnFs)) {QualityProfileFs[[i]] <- list()
+  QualityProfileFs[[i]][[1]] <- plotQualityProfile(fnFs[i])}
+pdf("QualityProfileForward.pdf")
+for(i in 1:length(fnFs)) {do.call("grid.arrange", 
+    QualityProfileFs[[i]])}
+dev.off()
+rm(QualityProfileFs)
+# failed: w−st−SWPF1 
+# negCtr low reads as expected 
+# looking otherwise OK
+
+QualityProfileRs <- list()
+for(i in 1:length(fnRs)) {
+  QualityProfileRs[[i]] <- list()
+  QualityProfileRs[[i]][[1]] <- plotQualityProfile(
+    fnRs[i])}
+pdf("QualityProfileReverse.pdf")
+for(i in 1:length(fnRs)) {do.call("grid.arrange", 
+  QualityProfileRs[[i]])}
+dev.off()
+rm(QualityProfileRs)
+# bad quality of rev-reads! only >20 until 200bp
+
+# Prepare for fastq filtering
+filt_path <- file.path(path, "../Filtered")
+if(!file_test("-d", filt_path)) dir.create(filt_path)
+filtFs <- file.path(
+  filt_path, paste0(sampleNames, "_F_filt.fastq"))
+filtRs <- file.path(
+  filt_path, paste0(sampleNames, "_R_filt.fastq"))
+
+#################################
+
+# Filter depending on expected overlap
+# truncLen lowered for rev-reads
+# more than usual for fwd-reads to ensure overlap
+out <- filterAndTrim(
+  fnFs, 
+  filtFs, 
+  fnRs, 
+  filtRs,
+  truncLen = c(250, 180),
+  maxN = 0,
+  minQ = 2,
+  maxEE = c(3,3), 
+  truncQ = 0, 
+  rm.phix = T,
+  compress = F,
+  multithread = 6)
+head(out)
+summary(out[, 2]/out[, 1])
+# should be retaining >70%
+# 0.75 here -- OK!
+
+#################################
+
+# Quality check 
+QualityProfileFs.filt <- list()
+for(i in 1:length(filtFs)) {
+  QualityProfileFs.filt[[i]] <- list()
+  QualityProfileFs.filt[[i]][[1]] <- plotQualityProfile(
+    filtFs[i])}
+pdf("QualityProfileForwardFiltered.pdf")
+for(i in 1:length(filtFs)) {do.call("grid.arrange", 
+    QualityProfileFs.filt[[i]])}
+dev.off()
+rm(QualityProfileFs.filt)
+
+QualityProfileRs.filt <- list()
+for(i in 1:length(filtRs)) {
+  QualityProfileRs.filt[[i]] <- list()
+  QualityProfileRs.filt[[i]][[1]] <- plotQualityProfile(
+    filtRs[i])}
+pdf("QualityProfileReverseFiltered.pdf")
+for(i in 1:length(filtRs)) {  do.call("grid.arrange", 
+    QualityProfileRs.filt[[i]])}
+dev.off()
+rm(QualityProfileRs.filt)
+
+#################################
+
+# Learn errors 
+errF <- learnErrors(
+  filtFs, multithread=12, 
+  randomize=T, verbose=1, MAX_CONSIST=20)
+errR <- learnErrors(
+  filtRs, multithread=12, 
+  randomize=T, verbose=1, MAX_CONSIST=20)
+
+# Plot error profiles
+pdf("ErrorProfiles.pdf")
+plotErrors(errF, nominalQ=T)
+plotErrors(errR, nominalQ=T)
+dev.off()
+# convergence after 6/6 rounds - ok!
+# few outliers outside black line - ok!
+
+# Dereplication 
+derepFs <- derepFastq(filtFs, verbose=T)
+derepRs <- derepFastq(filtRs, verbose=T)
+
+# Rename by sampleNames
+names(derepFs) <- sampleNames
+names(derepRs) <- sampleNames
+
+# Denoising
+dadaFs <- dada(
+  derepFs, err=errF, multithread=T, pool=T)
+dadaRs <- dada(
+  derepRs, err=errR, multithread=T, pool=T)
+
+#################################
+
+# Read merging
+mergers <- mergePairs(
+  dadaFs, 
+  derepFs, 
+  dadaRs,
+  derepRs,
+  minOverlap=15,
+  verbose=T,
+  propagateCol = c(
+    "birth_fold", 
+    "birth_ham"))
+
+# create sequence table
+seqtab <- makeSequenceTable(mergers)
+dim(seqtab) # identified 38028 sequences
+saveRDS(seqtab, "seqtab.rds")
+
+# Removing chimeras 
+# 29581 bimeras out of 37256
+seqtab.nochim <- removeBimeraDenovo(
+  seqtab, method="consensus", 
+  multithread=12, verbose=T)
+
+# 34 samples -- 8447 sequences
+# approx 90% kept - OK!
+dim(seqtab.nochim)  
+summary(rowSums(seqtab.nochim)/rowSums(seqtab))
+
+# Determine amplicon length/size range 
+table(rep(nchar(colnames(seqtab.nochim)), 
+          colSums(seqtab.nochim)))
+
+# Remove singletons and junk sequences
+# "c" adjusted to size range of amplicons
+seqtab.nochim2 <- seqtab.nochim[, nchar(
+  colnames(seqtab.nochim)) %in% c(365:408) & 
+    colSums(seqtab.nochim) > 1]
+
+# Stats
+dim(seqtab.nochim2) # 7093 sequences
+summary(rowSums(seqtab.nochim2))
+summary(rowSums(seqtab.nochim2)/rowSums(
+  seqtab.nochim))
+
+###################################################################################
+
+## TAXONOMY ##
+
+tax <- assignTaxonomy(
+  seqtab.nochim2, 
+  "../../tax_db/silva_nr99_v138.1_wSpecies_train_set.fa.gz", 
+  tryRC = TRUE,
+  multithread = 12)
+
+#  Archaea / Bacteria  65 / 7028
+table(tax[, 1])  
+
+# Remove NA on phylum level
+sum(is.na(tax[, 2])) #40
+tax.good <- tax[!is.na(tax[, 2]),]
+seqtab.nochim2.good <- seqtab.nochim2[
+  , rownames(tax.good)]
+summary(rowSums(seqtab.nochim2.good))
+
+# Format tables
+seqtab.nochim2.print <- t(seqtab.nochim2.good)
+tax.print <- tax.good
+all.equal(rownames(
+  seqtab.nochim2.print), 
+  rownames(tax.print)) #TRUE
+rownames(seqtab.nochim2.print) <- paste(
+  "asv", 1:ncol(seqtab.nochim2.good), sep="")
+rownames(tax.print) <- rownames(seqtab.nochim2.print)
+
+# Export
+write.table(
+  seqtab.nochim2.print,"seqtab.txt", 
+  sep="\t", quote=F)
+write.table(
+  tax.print,"tax.txt", 
+  sep="\t", quote=F)
+uniquesToFasta(
+  seqtab.nochim2.good,
+  "ASV.fasta")
+
+# summary stats
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(
+  dadaFs, getN), sapply(mergers, getN), 
+  rowSums(seqtab), rowSums(seqtab.nochim2))
+colnames(track) <- c(
+  "input","filtered","denoised",
+  "merged","nochim","tabled")
+rownames(track) <- sampleNames
+track <- data.frame(track)
+head(track)
+
+write.table(track, 
+  "dadastats.txt", 
+  quote=F, sep="\t")
+
+#################################
+
+save.image("Permafrost.Rdata")
+
+```
